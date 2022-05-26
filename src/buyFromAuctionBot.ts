@@ -1,5 +1,11 @@
 import { ethers, BigNumber } from "ethers";
-import { SPOT, DOG, INTERACTION, USB } from "../addresses/addresses.json";
+import {
+  SPOT,
+  DOG,
+  USB,
+  INTERACTION,
+  AUCTION_PROXY,
+} from "../addresses/addresses.json";
 
 import CLIP_ABI from "../abis/clipAbi.json";
 import SPOT_ABI from "../abis/spotAbi.json";
@@ -128,12 +134,10 @@ const main = async () => {
       allowance = BigNumber.from(allowance);
       const oracle = new ethers.Contract(spotIlk[0], ORACLE_ABI, wallet);
       const clip = new ethers.Contract(dogIlk[0], CLIP_ABI, wallet);
-      if (allowance.lt(ethers.constants.MaxUint256)) {
-        usb
-          .approve(interaction.address, ethers.constants.MaxUint256)
-          .then(() => {
-            console.log("successful approve");
-          });
+      if (!allowance.eq(ethers.constants.MaxUint256)) {
+        usb.approve(AUCTION_PROXY, ethers.constants.MaxUint256).then(() => {
+          console.log("successful approve");
+        });
       } else {
         console.log("no need of approve");
       }
