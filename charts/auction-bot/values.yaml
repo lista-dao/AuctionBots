@@ -1,0 +1,49 @@
+global:
+  repository: harbor
+  tag: test
+  image: auction-bot
+  env: dev
+  host: harbor
+
+replicaCount: 1
+hostNetwork: false
+dnsPolicy: ClusterFirst
+imagePullPolicy: IfNotPresent
+
+configMap:
+  RELEASE_MODE: "true"
+  TEST_ENV:
+    dev: 'dev'
+    stage: 'stage'
+
+services:
+  - protocol: TCP
+    port: 6565
+    targetPort: 6565
+  - protocol: TCP
+    port: 7575
+    targetPort: 7575
+
+livenessProbe:
+  tcpSocket:
+    port: 6565
+  failureThreshold: 1
+  initialDelaySeconds: 90
+  periodSeconds: 15
+  successThreshold: 1
+  timeoutSeconds: 2
+readinessProbe:
+  tcpSocket:
+    port: 6565
+  failureThreshold: 1
+  initialDelaySeconds: 15
+  periodSeconds: 15
+  successThreshold: 1
+  timeoutSeconds: 2
+
+metrics:
+  enabled: false
+  port: 7575
+
+ingress:
+  enabled: false

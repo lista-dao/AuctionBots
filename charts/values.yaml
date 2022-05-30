@@ -1,0 +1,4 @@
+auction-bot:
+  enabled: true
+  global:
+    image: auction-bot

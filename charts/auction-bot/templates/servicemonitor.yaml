@@ -1,0 +1,22 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name:  {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+    chart: {{ template "app.chart" . }}
+    release: {{ .Chart.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  endpoints:
+    - path: /metrics
+      targetPort: {{ .Values.metrics.port }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+      release: {{ .Chart.Name }}
+{{- end }}

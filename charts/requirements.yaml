@@ -1,0 +1,5 @@
+dependencies:
+  - name: auction-bot
+    version: "0.0.1"
+    repository: "file://auction-bot"
+    condition: auction-bot.enabled
