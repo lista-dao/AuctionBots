@@ -7,7 +7,6 @@ on:
       - develop
       - stage
 
-
 env:
   REGISTRY: harbor.helio.money
   HARBOR_PROJECT: helio
