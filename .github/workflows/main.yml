@@ -11,10 +11,11 @@ on:
 env:
   REGISTRY: harbor.helio.money
   HARBOR_PROJECT: helio
+  HARBOR_USERNAME: 'robot$rancher-deploy'
   # HARBOR_USERNAME: <in security context>
   # HARBOR_PASSWORD: <in security context>
   #--RANCHER_DEV---#
-  RANCHER_SERVER_URL_DEV: https://rancher.dev.helio.money/v3
+  RANCHER_SERVER_URL_DEV: "https://rancher.dev.helio.money/v3"
   RANCHER_PROJECT_DEV: "local:p-zgwws"
   #--RANCHER_STAGE---#
   RANCHER_PROJECT_STAGE: "local:p-9hrgq"
@@ -40,7 +41,7 @@ jobs:
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.HARBOR_USERNAME }}
+          username: ${{ env.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
 
       - name: Extract metadata (tags, labels) for Docker
@@ -64,14 +65,13 @@ jobs:
       KUBE_NAMESPACE: auction-bot
       ENVIRONMENT_NAME: dev
       CHART_NAME: auction-bot
-      HARBOR_USERNAME: 'robot$rancher-deploy'
     steps:
      - uses: actions/checkout@v1
      - run: |
         rancher login ${{ env.RANCHER_SERVER_URL_DEV }}  --token ${{ secrets.RANCHER_TOKEN_DEV }} --context ${{ env.RANCHER_PROJECT_DEV }}
         rancher kubectl config view --raw > /tmp/config && export KUBECONFIG=/tmp/config
         kubectl create namespace $KUBE_NAMESPACE || true
-        kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=$HARBOR_USERNAME --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
+        kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=${{ env.HARBOR_USERNAME }} --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
         kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "docker-secret"}]}' -n $KUBE_NAMESPACE || true
         kubectl annotate namespace $KUBE_NAMESPACE field.cattle.io/projectId={{ RANCHER_PROJECT_DEV }} || true
         helm dependency update ./charts
@@ -89,14 +89,13 @@ jobs:
       KUBE_NAMESPACE: helio-backend-stage
       ENVIRONMENT_NAME: stage
       CHART_NAME: auctionbots
-      HARBOR_USERNAME: 'robot$rancher-deploy'
     steps:
      - uses: actions/checkout@v1
      - run: |
         rancher login ${{ env.RANCHER_SERVER_URL_DEV }}  --token ${{ secrets.RANCHER_TOKEN_DEV }} --context ${{ env.RANCHER_PROJECT_DEV }}
         rancher kubectl config view --raw > /tmp/config && export KUBECONFIG=/tmp/config
         kubectl create namespace $KUBE_NAMESPACE || true
-        kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=$HARBOR_USERNAME --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
+        kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=${{ env.HARBOR_USERNAME }} --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
         kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "docker-secret"}]}' -n $KUBE_NAMESPACE || true
         kubectl annotate namespace $KUBE_NAMESPACE field.cattle.io/projectId=$RANCHER_PROJECT || true
         helm dependency update ./charts
@@ -114,14 +113,13 @@ jobs:
       KUBE_NAMESPACE: helio-backend-prod
       ENVIRONMENT_NAME: prod
       CHART_NAME: auctionbots
-      HARBOR_USERNAME: 'robot$rancher-deploy'
     steps:
      - uses: actions/checkout@v1
      - run: |
         rancher login ${{ env.RANCHER_SERVER_URL_PROD }}  --token ${{ secrets.RANCHER_TOKEN_PROD }} --context ${{ secrets.RANCHER_PROJECT_PROD }}
         rancher kubectl config view --raw > /tmp/config && export KUBECONFIG=/tmp/config
         kubectl create namespace $KUBE_NAMESPACE || true
-        kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=$HARBOR_USERNAME --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
+        kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=${{ env.HARBOR_USERNAME }} --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
         kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "docker-secret"}]}' -n $KUBE_NAMESPACE || true
         kubectl annotate namespace $KUBE_NAMESPACE field.cattle.io/projectId=${{ env.RANCHER_PROJECT_PROD }} || true
         helm dependency update ./charts
