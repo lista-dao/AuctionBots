@@ -5,6 +5,13 @@ global:
   env: dev
   host: harbor
 
+argumentsBuy:
+  - yarn
+  - buyFromAuctionBot
+argumentsKick:
+  - yarn
+  - startAuctionBot
+
 replicaCount: 1
 hostNetwork: false
 dnsPolicy: ClusterFirst
@@ -44,6 +51,3 @@ readinessProbe:
 metrics:
   enabled: false
   port: 7575
-
-ingress:
-  enabled: false

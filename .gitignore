@@ -1,3 +1,6 @@
 node_modules
 .vscode
 .env
+
+charts/charts
+charts/requirements.lock

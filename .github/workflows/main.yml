@@ -1,0 +1,132 @@
+name: Create and publish a Docker image
+
+on:
+  push:
+    branches: 
+      - master
+      - develop
+      - stage
+
+
+env:
+  REGISTRY: harbor.helio.money
+  HARBOR_PROJECT: helio
+  # HARBOR_USERNAME: <in security context>
+  # HARBOR_PASSWORD: <in security context>
+  #--RANCHER_DEV---#
+  RANCHER_SERVER_URL_DEV: https://rancher.dev.helio.money/v3
+  RANCHER_PROJECT_DEV: "local:p-zgwws"
+  #--RANCHER_STAGE---#
+  RANCHER_PROJECT_STAGE: "local:p-9hrgq"
+  # RANCHER_TOKEN_DEV: <in security context>
+  #----------------#
+  #--RANCHER_PROD--#
+  RANCHER_SERVER_URL_PROD: https://rancher.prod.helio.money/v3
+  # RANCHER_PROJECT_PROD: <in security context>
+  # RANCHER_TOKEN_PROD: <in security context>
+  SERVICE_NAME: auction-bot
+
+jobs:
+  build-and-push-image:
+    runs-on: [self-hosted]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.HARBOR_PROJECT }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.HARBOR_PROJECT }}/${{ env.SERVICE_NAME}}:${{ github.sha }}
+
+  deploy-develop:
+    runs-on: [self-hosted]
+    if: github.ref == 'refs/heads/develop'
+    needs: build-and-push-image
+    env:
+      KUBE_NAMESPACE: auction-bot
+      ENVIRONMENT_NAME: dev
+      CHART_NAME: auction-bot
+      HARBOR_USERNAME: 'robot$rancher-deploy'
+    steps:
+     - uses: actions/checkout@v1
+     - run: |
+        rancher login ${{ env.RANCHER_SERVER_URL_DEV }}  --token ${{ secrets.RANCHER_TOKEN_DEV }} --context ${{ env.RANCHER_PROJECT_DEV }}
+        rancher kubectl config view --raw > /tmp/config && export KUBECONFIG=/tmp/config
+        kubectl create namespace $KUBE_NAMESPACE || true
+        kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=$HARBOR_USERNAME --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
+        kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "docker-secret"}]}' -n $KUBE_NAMESPACE || true
+        kubectl annotate namespace $KUBE_NAMESPACE field.cattle.io/projectId={{ RANCHER_PROJECT_DEV }} || true
+        helm dependency update ./charts
+        helm upgrade --install $CHART_NAME --namespace=$KUBE_NAMESPACE \
+            --set global.env=$ENVIRONMENT_NAME \
+            --set global.repository=${{ env.REGISTRY }}/${{ env.HARBOR_PROJECT }} \
+            --set global.tag=${{ github.sha }} \
+            ./charts
+
+  deploy-develop-stage:
+    runs-on: [self-hosted]
+    needs: build-and-push-image
+    if: github.ref == 'refs/heads/stage'
+    env:
+      KUBE_NAMESPACE: helio-backend-stage
+      ENVIRONMENT_NAME: stage
+      CHART_NAME: auctionbots
+      HARBOR_USERNAME: 'robot$rancher-deploy'
+    steps:
+     - uses: actions/checkout@v1
+     - run: |
+        rancher login ${{ env.RANCHER_SERVER_URL_DEV }}  --token ${{ secrets.RANCHER_TOKEN_DEV }} --context ${{ env.RANCHER_PROJECT_DEV }}
+        rancher kubectl config view --raw > /tmp/config && export KUBECONFIG=/tmp/config
+        kubectl create namespace $KUBE_NAMESPACE || true
+        kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=$HARBOR_USERNAME --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
+        kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "docker-secret"}]}' -n $KUBE_NAMESPACE || true
+        kubectl annotate namespace $KUBE_NAMESPACE field.cattle.io/projectId=$RANCHER_PROJECT || true
+        helm dependency update ./charts
+        helm upgrade --install $CHART_NAME --namespace=$KUBE_NAMESPACE \
+            --set global.env=$ENVIRONMENT_NAME \
+            --set global.repository=${{ env.REGISTRY }}/${{ env.HARBOR_PROJECT }} \
+            --set global.tag=${{ github.sha }} \
+            ./charts
+
+  deploy-prod-master:
+    runs-on: [self-hosted]
+    needs: build-and-push-image
+    if: github.ref == 'refs/heads/master'
+    env:
+      KUBE_NAMESPACE: helio-backend-prod
+      ENVIRONMENT_NAME: prod
+      CHART_NAME: auctionbots
+      HARBOR_USERNAME: 'robot$rancher-deploy'
+    steps:
+     - uses: actions/checkout@v1
+     - run: |
+        rancher login ${{ env.RANCHER_SERVER_URL_PROD }}  --token ${{ secrets.RANCHER_TOKEN_PROD }} --context ${{ secrets.RANCHER_PROJECT_PROD }}
+        rancher kubectl config view --raw > /tmp/config && export KUBECONFIG=/tmp/config
+        kubectl create namespace $KUBE_NAMESPACE || true
+        kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=$HARBOR_USERNAME --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
+        kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "docker-secret"}]}' -n $KUBE_NAMESPACE || true
+        kubectl annotate namespace $KUBE_NAMESPACE field.cattle.io/projectId=${{ env.RANCHER_PROJECT_PROD }} || true
+        helm dependency update ./charts
+        helm upgrade --install $CHART_NAME --namespace=$KUBE_NAMESPACE \
+            --set global.env=$ENVIRONMENT_NAME \
+            --set global.repository=${{ env.REGISTRY }}/${{ env.HARBOR_PROJECT }} \
+            --set global.tag=${{ github.sha }} \
+            ./charts
