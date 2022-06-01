@@ -95,8 +95,8 @@ jobs:
         rancher login ${{ env.RANCHER_SERVER_URL_DEV }}  --token ${{ secrets.RANCHER_TOKEN_DEV }} --context ${{ env.RANCHER_PROJECT_DEV }}
         rancher kubectl config view --raw > /tmp/config && export KUBECONFIG=/tmp/config
         helm plugin install https://github.com/zendesk/helm-secrets || true
-        echo "$GPG_VALUES_SECRET" | base64 -d | gpg --import
-        echo "$GPG_VALUES_PUBLIC" | base64 -d | gpg --import
+        echo "${{ secrets.GPG_VALUES_SECRET }}" | base64 -d | gpg --import
+        echo "${{ secrets.GPG_VALUES_PUBLIC }}" | base64 -d | gpg --import
         VALUES_FILE=./charts/stage-values.yaml
         helm secrets dec $VALUES_FILE
         mv ${VALUES_FILE}.dec $VALUES_FILE
