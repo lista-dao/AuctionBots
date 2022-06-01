@@ -40,6 +40,6 @@ spec:
             {{- .Values.readinessProbe | toYaml | nindent 12 }}
           envFrom:
             - configMapRef:
-                name: {{ .Chart.Name }}
+                name: {{ .Chart.Name }}-kick
       hostNetwork: {{ .Values.hostNetwork }}
       dnsPolicy: {{ .Values.dnsPolicy}}

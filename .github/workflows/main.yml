@@ -94,6 +94,12 @@ jobs:
      - run: |
         rancher login ${{ env.RANCHER_SERVER_URL_DEV }}  --token ${{ secrets.RANCHER_TOKEN_DEV }} --context ${{ env.RANCHER_PROJECT_DEV }}
         rancher kubectl config view --raw > /tmp/config && export KUBECONFIG=/tmp/config
+        helm plugin install https://github.com/zendesk/helm-secrets
+        echo -e "$GPG_VALUES_SECRET" | base64 -d | gpg --import
+        echo -e "$GPG_VALUES_PUBLIC" | base64 -d | gpg --import
+        VALUES_FILE=./charts/stage-values.yaml
+        helm secrets dec $VALUES_FILE
+        mv ${VALUES_FILE}.dec $VALUES_FILE
         kubectl create namespace $KUBE_NAMESPACE || true
         kubectl create secret docker-registry docker-secret --docker-server=${{ env.REGISTRY }} --docker-username=${{ env.HARBOR_USERNAME }} --docker-password=${{ secrets.HARBOR_PASSWORD }} -n $KUBE_NAMESPACE || true
         kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "docker-secret"}]}' -n $KUBE_NAMESPACE || true

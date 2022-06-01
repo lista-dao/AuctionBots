@@ -1,8 +1,7 @@
-{{- if .Values.configMap }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name:  {{ .Chart.Name }}
+  name:  {{ .Chart.Name }}-kick
   labels:
     app.kubernetes.io/name:  {{ .Chart.Name }}
     helm.sh/chart: {{ print $.Chart.Name "-" $.Chart.Version }}
@@ -11,11 +10,10 @@ metadata:
 data:
   {{- $env := .Values.global.env }}
   GLOBAL_ENVIRONMENT: "{{ $env }}"
-  {{- range $k, $v := .Values.configMap }}
+  {{- range $k, $v := .Values.configMapKick }}
     {{- if eq (kindOf $v) "map" }}
   {{ $k }}: "{{ pluck $env $v | default (pluck "default" $v) | first | default "" | toString | replace "{env}" $env }}"
     {{- else }}
   {{ $k }}: {{ $v | default "" | replace "{env}" $env | quote | indent 4 }}
     {{- end }}
   {{- end }}
-{{- end }}

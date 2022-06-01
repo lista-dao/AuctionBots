@@ -17,12 +17,6 @@ hostNetwork: false
 dnsPolicy: ClusterFirst
 imagePullPolicy: IfNotPresent
 
-configMap:
-  RELEASE_MODE: "true"
-  TEST_ENV:
-    dev: 'dev'
-    stage: 'stage'
-
 services:
   - protocol: TCP
     port: 6565
