@@ -16,13 +16,13 @@ import VAT_ABI from "../abis/vatAbi.json";
 import SPOT_ABI from "../abis/spotAbi.json";
 import INTERACTION_ABI from "../abis/interactionAbi.json";
 import AGGREGATOR_ABI from "../abis/chainlinkAggregatorAbi.json";
-import { PRIVATE_KEY, RPC_URL, START_AUCTION_INTERVAL } from "./envVars";
+import { PRIVATE_KEY, START_AUCTION_INTERVAL, WEBSOCKET_URL } from "./envVars";
 
 const ten = BigNumber.from(10);
 const wad = ten.pow(18);
 const ray = ten.pow(27);
 
-const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+const provider = new ethers.providers.WebSocketProvider(WEBSOCKET_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
 const min = (num1: BigNumber, num2: BigNumber): BigNumber => {
