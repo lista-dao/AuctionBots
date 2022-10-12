@@ -170,6 +170,7 @@ const main = async () => {
         Dirt: BigNumber,
         response: AxiosResponse<any, any>
       ]) => {
+        console.log("SetInterval trigger!");
         Hole = BigNumber.from(Hole);
         Dirt = BigNumber.from(Dirt);
         const responseData = response.data;

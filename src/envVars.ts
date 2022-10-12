@@ -14,7 +14,7 @@ if (!websocketUrl) {
 }
 
 if (!startAuctionInterval) {
-  startAuctionInterval = "86400";
+  startAuctionInterval = "86400000";
 }
 
 if (!buyFromAuctionInterval) {
