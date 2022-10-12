@@ -5,8 +5,8 @@
   "author": "Alexandr Martirosyan",
   "license": "MIT",
   "scripts": {
-    "startAuctionBot": "ts-node src/startAuctionBot.ts",
-    "buyFromAuctionBot": "ts-node src/buyFromAuctionBot.ts"
+    "startAuctionBot": "ts-node src/startAuctionBotNew.ts",
+    "buyFromAuctionBot": "ts-node src/buyFromAuctionBotNew.ts"
   },
   "dependencies": {
     "@types/dotenv": "^8.2.0",
