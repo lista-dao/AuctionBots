@@ -19,7 +19,7 @@ if (!rpcUrl) {
 }
 
 if (!startAuctionInterval) {
-  startAuctionInterval = "10000";
+  startAuctionInterval = "86400";
 }
 
 if (!buyFromAuctionInterval) {
