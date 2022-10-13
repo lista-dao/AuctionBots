@@ -1,14 +1,6 @@
 import { ethers, BigNumber } from "ethers";
 import axios, { AxiosResponse } from "axios";
 import https from "https";
-import {
-  DOG,
-  VAT,
-  SPOT,
-  INTERACTION,
-  CHAINLINK_AGGREGATOR,
-  TOKENS,
-} from "../addresses/addresses.json";
 
 import CLIP_ABI from "../abis/clipAbi.json";
 import DOG_ABI from "../abis/dogAbi.json";
@@ -16,7 +8,18 @@ import VAT_ABI from "../abis/vatAbi.json";
 import SPOT_ABI from "../abis/spotAbi.json";
 import INTERACTION_ABI from "../abis/interactionAbi.json";
 import AGGREGATOR_ABI from "../abis/chainlinkAggregatorAbi.json";
-import { PRIVATE_KEY, START_AUCTION_INTERVAL, WEBSOCKET_URL } from "./envVars";
+import {
+  PRIVATE_KEY,
+  START_AUCTION_INTERVAL,
+  WEBSOCKET_URL,
+  API,
+  DOG,
+  VAT,
+  SPOT,
+  INTERACTION,
+  CHAINLINK_AGGREGATOR,
+  TOKENS,
+} from "./envVars";
 
 const ten = BigNumber.from(10);
 const wad = ten.pow(18);
@@ -33,10 +36,6 @@ const wmul = (num1: BigNumber, num2: BigNumber): BigNumber => {
   return num1.mul(num2).div(wad);
 };
 
-const toWad = (num: string) => {
-  return ethers.utils.parseUnits(num, 18);
-};
-
 const GAS_LIMIT = BigNumber.from("700000");
 
 const aggregator = new ethers.Contract(
@@ -50,15 +49,18 @@ const dog = new ethers.Contract(DOG, DOG_ABI, wallet);
 const vat = new ethers.Contract(VAT, VAT_ABI, wallet);
 const interaction = new ethers.Contract(INTERACTION, INTERACTION_ABI, wallet);
 
+const agent = new https.Agent({
+  rejectUnauthorized: false,
+});
+const instance = axios.create({
+  baseURL: API,
+  httpsAgent: agent,
+});
 const getUsersInDebt = () => {
-  const agent = new https.Agent({
-    rejectUnauthorized: false,
-  });
-  return axios.get("https://api.dev.helio.money/borrowers_addresses/", {
+  return instance.get("/borrowers_addresses", {
     headers: {
       "Content-Type": "application/json",
     },
-    httpsAgent: agent,
   });
 };
 
@@ -197,6 +199,7 @@ const main = async () => {
       console.log("Unsupported token ilk");
       return;
     }
+    console.log("Here0");
     Promise.all([
       aggregator.latestRoundData(),
       dog.Hole(),
@@ -209,6 +212,8 @@ const main = async () => {
         Dirt: BigNumber,
         response: AxiosResponse<any, any>
       ]) => {
+        console.log("Here");
+
         Hole = BigNumber.from(Hole);
         Dirt = BigNumber.from(Dirt);
         const responseData = response.data;

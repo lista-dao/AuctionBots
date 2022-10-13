@@ -1,5 +1,4 @@
 import { ethers, BigNumber } from "ethers";
-import { SPOT, HAY, TOKENS, INTERACTION } from "../addresses/addresses.json";
 
 import CLIP_ABI from "../abis/clipAbi.json";
 import SPOT_ABI from "../abis/spotAbi.json";
@@ -10,6 +9,10 @@ import {
   PRIVATE_KEY,
   WEBSOCKET_URL,
   BUY_FROM_AUCTION_INTERVAL,
+  SPOT,
+  HAY,
+  TOKENS,
+  INTERACTION,
 } from "./envVars";
 
 interface Auction {
