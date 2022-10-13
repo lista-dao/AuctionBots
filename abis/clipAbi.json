@@ -1,31 +1,5 @@
 [
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "vat_",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "spotter_",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "dog_",
-        "type": "address"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "ilk_",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
     "anonymous": false,
     "inputs": [
       {
@@ -74,6 +48,19 @@
       }
     ],
     "name": "File",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "version",
+        "type": "uint8"
+      }
+    ],
+    "name": "Initialized",
     "type": "event"
   },
   {
@@ -458,6 +445,34 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "vat_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "spotter_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "dog_",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "ilk_",
+        "type": "bytes32"
+      }
+    ],
+    "name": "initialize",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "tab",
         "type": "uint256"
@@ -550,41 +565,48 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "id",
         "type": "uint256"
       }
     ],
     "name": "sales",
     "outputs": [
       {
-        "internalType": "uint256",
-        "name": "pos",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tab",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "lot",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "usr",
-        "type": "address"
-      },
-      {
-        "internalType": "uint96",
-        "name": "tic",
-        "type": "uint96"
-      },
-      {
-        "internalType": "uint256",
-        "name": "top",
-        "type": "uint256"
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "pos",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tab",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lot",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "usr",
+            "type": "address"
+          },
+          {
+            "internalType": "uint96",
+            "name": "tic",
+            "type": "uint96"
+          },
+          {
+            "internalType": "uint256",
+            "name": "top",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct Sale",
+        "name": "",
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",

@@ -1,29 +1,25 @@
 import { ethers, BigNumber } from "ethers";
-import {
-  SPOT,
-  DOG,
-  USB,
-  INTERACTION,
-  AUCTION_PROXY,
-} from "../addresses/addresses.json";
 
 import CLIP_ABI from "../abis/clipAbi.json";
 import SPOT_ABI from "../abis/spotAbi.json";
-import DOG_ABI from "../abis/dogAbi.json";
 import INTERACTION_ABI from "../abis/interactionAbi.json";
 import ORACLE_ABI from "../abis/oracleAbi.json";
-import USB_ABI from "../abis/usbAbi.json";
+import HAY_ABI from "../abis/hayAbi.json";
 import {
-  COLLATERAL_ADDRESS,
-  COLLATERAL_ILK,
   PRIVATE_KEY,
   WEBSOCKET_URL,
+  BUY_FROM_AUCTION_INTERVAL,
+  SPOT,
+  HAY,
+  TOKENS,
+  INTERACTION,
 } from "./envVars";
 
 interface Auction {
   id: BigNumber;
   clip: ethers.Contract;
   oracle: ethers.Contract;
+  tokenAddress: string;
 }
 
 const ten = BigNumber.from(10);
@@ -33,27 +29,24 @@ const wsProvider = new ethers.providers.WebSocketProvider(WEBSOCKET_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, wsProvider);
 
 const spotContract = new ethers.Contract(SPOT, SPOT_ABI, wallet);
-const dog = new ethers.Contract(DOG, DOG_ABI, wallet);
 const interaction = new ethers.Contract(INTERACTION, INTERACTION_ABI, wallet);
-const usb = new ethers.Contract(USB, USB_ABI, wallet);
+const hay = new ethers.Contract(HAY, HAY_ABI, wallet);
 
 const auctions = new Map<number, Auction>();
 
-const gasLimit = BigNumber.from("500000");
+const gasLimit = BigNumber.from("700000");
 const pricePercent = BigNumber.from("95");
-const interval = 3000;
 
 let pendingTxExist = false;
 
 setInterval(() => {
-  console.log("Trying!");
   for (const [idNum, auction] of auctions) {
     console.log("auction id is ->", auction.id.toString());
     const { id, clip, oracle } = auction;
     Promise.all([
       clip.getStatus(id),
       oracle.peek(),
-      usb.balanceOf(wallet.address),
+      hay.balanceOf(wallet.address),
     ]).then(
       ([status, peekRes, botBalance]: [
         status: Array<any>,
@@ -86,7 +79,7 @@ setInterval(() => {
           auctions.delete(idNum);
           interaction
             .buyFromAuction(
-              COLLATERAL_ADDRESS,
+              auction.tokenAddress,
               id,
               collateralAmount,
               auctionPrice.mul(10 ** 9),
@@ -115,45 +108,42 @@ setInterval(() => {
       }
     );
   }
-}, interval);
+}, BUY_FROM_AUCTION_INTERVAL);
 
 const main = async () => {
-  Promise.all([
-    spotContract.ilks(COLLATERAL_ILK),
-    dog.ilks(COLLATERAL_ILK),
-    usb.allowance(wallet.address, interaction.address),
-  ]).then(
-    ([spotIlk, dogIlk, allowance]: [
-      spotIlk: Array<any>,
-      dogIlk: Array<any>,
-      allowance: BigNumber
-    ]) => {
-      console.log(spotIlk[0]);
-      console.log(dogIlk[0]);
+  for (const tokenInfo of TOKENS) {
+    Promise.all([
+      spotContract.ilks(tokenInfo.ilk),
+      hay.allowance(wallet.address, interaction.address),
+    ]).then(
+      ([spotIlk, allowance]: [spotIlk: Array<any>, allowance: BigNumber]) => {
+        console.log(spotIlk[0]);
 
-      allowance = BigNumber.from(allowance);
-      const oracle = new ethers.Contract(spotIlk[0], ORACLE_ABI, wallet);
-      const clip = new ethers.Contract(dogIlk[0], CLIP_ABI, wallet);
-      if (!allowance.eq(ethers.constants.MaxUint256)) {
-        usb.approve(AUCTION_PROXY, ethers.constants.MaxUint256).then(() => {
-          console.log("successful approve");
-        });
-      } else {
-        console.log("no need of approve");
-      }
-      clip.on("Kick", (id, top, tab, lot, usr, kpr, coin) => {
-        console.log(`Auction with id ${id.toString()} started`);
-
-        if (!auctions.has(id.toNumber())) {
-          auctions.set(id.toNumber(), {
-            id: BigNumber.from(id),
-            clip,
-            oracle,
+        allowance = BigNumber.from(allowance);
+        const oracle = new ethers.Contract(spotIlk[0], ORACLE_ABI, wallet);
+        const clip = new ethers.Contract(tokenInfo.clip, CLIP_ABI, wallet);
+        if (!allowance.eq(ethers.constants.MaxUint256)) {
+          hay.approve(INTERACTION, ethers.constants.MaxUint256).then(() => {
+            console.log("successful approve");
           });
+        } else {
+          console.log("no need of approve");
         }
-      });
-    }
-  );
+        clip.on("Kick", (id) => {
+          console.log(`Auction with id ${id.toString()} started`);
+
+          if (!auctions.has(id.toNumber())) {
+            auctions.set(id.toNumber(), {
+              id: BigNumber.from(id),
+              tokenAddress: tokenInfo.addr,
+              clip,
+              oracle,
+            });
+          }
+        });
+      }
+    );
+  }
 };
 
 main();
