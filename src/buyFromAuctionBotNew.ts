@@ -40,7 +40,6 @@ const pricePercent = BigNumber.from("95");
 let pendingTxExist = false;
 
 setInterval(() => {
-  console.log("Trying!");
   for (const [idNum, auction] of auctions) {
     console.log("auction id is ->", auction.id.toString());
     const { id, clip, oracle } = auction;
