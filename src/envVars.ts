@@ -8,6 +8,7 @@ interface TokenInfo {
 
 const privateKey = process.env.PRIVATE_KEY;
 const websocketUrl = process.env.WEBSOCKET_URL;
+const rpcUrl = process.env.RPC_URL;
 const api = process.env.API;
 
 // Addresses
@@ -35,6 +36,10 @@ if (!privateKey) {
 
 if (!websocketUrl) {
   throw new Error("websocket url does not provided");
+}
+
+if (!rpcUrl) {
+  throw new Error("rpc url does not provided");
 }
 
 if (!api) {
@@ -80,6 +85,7 @@ if (!buyFromAuctionInterval) {
 }
 
 export const WEBSOCKET_URL = websocketUrl;
+export const RPC_URL = rpcUrl;
 export const PRIVATE_KEY = privateKey;
 export const API = api;
 export const START_AUCTION_INTERVAL = parseInt(startAuctionInterval);
@@ -94,6 +100,7 @@ export const TOKENS = tokenInfos;
 
 export default {
   WEBSOCKET_URL,
+  RPC_URL,
   PRIVATE_KEY,
   API,
   VAT,

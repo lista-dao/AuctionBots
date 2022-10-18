@@ -13,6 +13,7 @@ import {
   HAY,
   TOKENS,
   INTERACTION,
+  RPC_URL,
 } from "./envVars";
 
 interface Auction {
@@ -25,12 +26,18 @@ interface Auction {
 const ten = BigNumber.from(10);
 const wad = ten.pow(18);
 
-const wsProvider = new ethers.providers.WebSocketProvider(WEBSOCKET_URL);
-const wallet = new ethers.Wallet(PRIVATE_KEY, wsProvider);
+const provider = new ethers.providers.WebSocketProvider(WEBSOCKET_URL);
+const rpcProvider = new ethers.providers.JsonRpcProvider(RPC_URL);
+const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const rpcWallet = new ethers.Wallet(PRIVATE_KEY, rpcProvider);
 
-const spotContract = new ethers.Contract(SPOT, SPOT_ABI, wallet);
-const interaction = new ethers.Contract(INTERACTION, INTERACTION_ABI, wallet);
-const hay = new ethers.Contract(HAY, HAY_ABI, wallet);
+const spotContract = new ethers.Contract(SPOT, SPOT_ABI, rpcWallet);
+const interaction = new ethers.Contract(
+  INTERACTION,
+  INTERACTION_ABI,
+  rpcWallet
+);
+const hay = new ethers.Contract(HAY, HAY_ABI, rpcWallet);
 
 const auctions = new Map<number, Auction>();
 
@@ -120,7 +127,7 @@ const main = async () => {
         console.log(spotIlk[0]);
 
         allowance = BigNumber.from(allowance);
-        const oracle = new ethers.Contract(spotIlk[0], ORACLE_ABI, wallet);
+        const oracle = new ethers.Contract(spotIlk[0], ORACLE_ABI, rpcWallet);
         const clip = new ethers.Contract(tokenInfo.clip, CLIP_ABI, wallet);
         if (!allowance.eq(ethers.constants.MaxUint256)) {
           hay.approve(INTERACTION, ethers.constants.MaxUint256).then(() => {

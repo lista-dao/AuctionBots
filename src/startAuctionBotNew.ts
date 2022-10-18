@@ -19,6 +19,7 @@ import {
   INTERACTION,
   CHAINLINK_AGGREGATOR,
   TOKENS,
+  RPC_URL,
 } from "./envVars";
 
 const ten = BigNumber.from(10);
@@ -26,7 +27,9 @@ const wad = ten.pow(18);
 const ray = ten.pow(27);
 
 const provider = new ethers.providers.WebSocketProvider(WEBSOCKET_URL);
+const rpcProvider = new ethers.providers.JsonRpcProvider(RPC_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const rpcWallet = new ethers.Wallet(PRIVATE_KEY, rpcProvider);
 
 const min = (num1: BigNumber, num2: BigNumber): BigNumber => {
   return num1.lt(num2) ? num1 : num2;
@@ -41,13 +44,17 @@ const GAS_LIMIT = BigNumber.from("700000");
 const aggregator = new ethers.Contract(
   CHAINLINK_AGGREGATOR,
   AGGREGATOR_ABI,
-  wallet
+  rpcWallet
 );
 
 const spotContract = new ethers.Contract(SPOT, SPOT_ABI, wallet);
-const dog = new ethers.Contract(DOG, DOG_ABI, wallet);
-const vat = new ethers.Contract(VAT, VAT_ABI, wallet);
-const interaction = new ethers.Contract(INTERACTION, INTERACTION_ABI, wallet);
+const dog = new ethers.Contract(DOG, DOG_ABI, rpcWallet);
+const vat = new ethers.Contract(VAT, VAT_ABI, rpcWallet);
+const interaction = new ethers.Contract(
+  INTERACTION,
+  INTERACTION_ABI,
+  rpcWallet
+);
 
 const agent = new https.Agent({
   rejectUnauthorized: false,
@@ -74,7 +81,7 @@ const getTokenInfoByIlk = (ilk: string) => {
 };
 
 const main = async () => {
-  let nonce = await wallet.getTransactionCount();
+  let nonce = await rpcWallet.getTransactionCount();
   const startAuction = (
     addr: string,
     ilk: string,
@@ -84,7 +91,7 @@ const main = async () => {
     Dirt: BigNumber,
     responseData: Record<string, string>[]
   ) => {
-    const clip = new ethers.Contract(clipAddr, CLIP_ABI, wallet);
+    const clip = new ethers.Contract(clipAddr, CLIP_ABI, rpcWallet);
     Promise.all([
       dog.ilks(ilk),
       vat.ilks(ilk),
@@ -111,7 +118,6 @@ const main = async () => {
             const spot = BigNumber.from(vatIlk[2]);
             const dust = BigNumber.from(vatIlk[4]);
             const chop = BigNumber.from(dogIlk[1]);
-
             if (!spot.isZero() && ink.mul(spot).lt(art.mul(rate))) {
               // calculate tab
               const room = min(
@@ -160,34 +166,30 @@ const main = async () => {
     );
   };
   setInterval(() => {
-    Promise.all([
-      aggregator.latestRoundData(),
-      dog.Hole(),
-      dog.Dirt(),
-      getUsersInDebt(),
-    ]).then(
-      ([roundData, Hole, Dirt, response]: [
+    Promise.all([aggregator.latestRoundData(), dog.Hole(), dog.Dirt()]).then(
+      ([roundData, Hole, Dirt]: [
         roundData: Record<string, any>,
         Hole: BigNumber,
-        Dirt: BigNumber,
-        response: AxiosResponse<any, any>
+        Dirt: BigNumber
       ]) => {
         console.log("SetInterval trigger!");
-        Hole = BigNumber.from(Hole);
-        Dirt = BigNumber.from(Dirt);
-        const responseData = response.data;
-        const bnbPrice = BigNumber.from(roundData.answer).mul(10 ** 10);
-        for (const tokenInfo of TOKENS) {
-          startAuction(
-            tokenInfo.addr,
-            tokenInfo.ilk,
-            tokenInfo.clip,
-            bnbPrice,
-            Hole,
-            Dirt,
-            responseData
-          );
-        }
+        getUsersInDebt().then((response) => {
+          Hole = BigNumber.from(Hole);
+          Dirt = BigNumber.from(Dirt);
+          const responseData = response.data;
+          const bnbPrice = BigNumber.from(roundData.answer).mul(10 ** 10);
+          for (const tokenInfo of TOKENS) {
+            startAuction(
+              tokenInfo.addr,
+              tokenInfo.ilk,
+              tokenInfo.clip,
+              bnbPrice,
+              Hole,
+              Dirt,
+              responseData
+            );
+          }
+        });
       }
     );
   }, START_AUCTION_INTERVAL);
@@ -199,34 +201,27 @@ const main = async () => {
       console.log("Unsupported token ilk");
       return;
     }
-    console.log("Here0");
-    Promise.all([
-      aggregator.latestRoundData(),
-      dog.Hole(),
-      dog.Dirt(),
-      getUsersInDebt(),
-    ]).then(
-      ([roundData, Hole, Dirt, response]: [
+    Promise.all([aggregator.latestRoundData(), dog.Hole(), dog.Dirt()]).then(
+      ([roundData, Hole, Dirt]: [
         roundData: Record<string, any>,
         Hole: BigNumber,
-        Dirt: BigNumber,
-        response: AxiosResponse<any, any>
+        Dirt: BigNumber
       ]) => {
-        console.log("Here");
-
-        Hole = BigNumber.from(Hole);
-        Dirt = BigNumber.from(Dirt);
-        const responseData = response.data;
-        const bnbPrice = BigNumber.from(roundData.answer).mul(10 ** 10);
-        startAuction(
-          tokenInfo.addr,
-          tokenInfo.ilk,
-          tokenInfo.clip,
-          bnbPrice,
-          Hole,
-          Dirt,
-          responseData
-        );
+        getUsersInDebt().then((response) => {
+          const responseData = response.data;
+          Hole = BigNumber.from(Hole);
+          Dirt = BigNumber.from(Dirt);
+          const bnbPrice = BigNumber.from(roundData.answer).mul(10 ** 10);
+          startAuction(
+            tokenInfo.addr,
+            tokenInfo.ilk,
+            tokenInfo.clip,
+            bnbPrice,
+            Hole,
+            Dirt,
+            responseData
+          );
+        });
       }
     );
   });
