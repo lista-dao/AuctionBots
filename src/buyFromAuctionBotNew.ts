@@ -41,7 +41,7 @@ const hay = new ethers.Contract(HAY, HAY_ABI, rpcWallet);
 
 const auctions = new Map<number, Auction>();
 
-const gasLimit = BigNumber.from("700000");
+const gasLimit = BigNumber.from("1000000");
 const pricePercent = BigNumber.from("95");
 
 let pendingTxExist = false;
