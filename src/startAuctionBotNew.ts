@@ -63,12 +63,21 @@ const instance = axios.create({
   baseURL: API,
   httpsAgent: agent,
 });
-const getUsersInDebt = () => {
-  return instance.get("/borrowers_addresses", {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+const getUsersInDebt = async () => {
+  return instance
+    .get("/liquidations/", { headers: { "Content-Type": "application/json" } })
+    .then((res) => {
+      const redUsers = res.data.redUsers;
+      const orangeUsers = res.data.orangeUsers;
+      const userArr: string[] = [];
+      for (const user of redUsers) {
+        userArr.push(user.userAddress);
+      }
+      for (const user of orangeUsers) {
+        userArr.push(user.userAddress);
+      }
+      return userArr;
+    });
 };
 
 const getTokenInfoByIlk = (ilk: string) => {
@@ -89,7 +98,7 @@ const main = async () => {
     bnbPrice: BigNumber,
     Hole: BigNumber,
     Dirt: BigNumber,
-    responseData: Record<string, string>[]
+    users: string[]
   ) => {
     const clip = new ethers.Contract(clipAddr, CLIP_ABI, rpcWallet);
     Promise.all([
@@ -108,60 +117,105 @@ const main = async () => {
       ]) => {
         tip = BigNumber.from(tip);
         chip = BigNumber.from(chip);
-        for (const data of responseData) {
-          const userAddress = data.user_address;
-          vat.urns(ilk, userAddress).then((urn: any) => {
-            console.log("user address:", userAddress);
-            const ink = BigNumber.from(urn[0]);
-            const art = BigNumber.from(urn[1]);
-            const rate = BigNumber.from(vatIlk[1]);
-            const spot = BigNumber.from(vatIlk[2]);
-            const dust = BigNumber.from(vatIlk[4]);
-            const chop = BigNumber.from(dogIlk[1]);
-            if (!spot.isZero() && ink.mul(spot).lt(art.mul(rate))) {
-              // calculate tab
-              const room = min(
-                Hole.sub(Dirt),
-                BigNumber.from(dogIlk[2]).sub(BigNumber.from(dogIlk[3]))
-              );
-              let dart = min(art, room.mul(wad).div(rate).div(chop));
-              if (art.gt(dart) && art.sub(dart).mul(rate).lt(dust)) {
-                dart = art;
-              }
-              const due = dart.mul(rate);
-              const tab = due.mul(chop).div(wad);
-              // calculate USB incentives amount
-              const usbIncentiveAmount = tip.add(wmul(tab, chip)).div(ray);
-              // calculate transaction cost
-              const txCost = gasPrice.mul(GAS_LIMIT).mul(bnbPrice).div(wad);
-              if (txCost.lt(usbIncentiveAmount)) {
-                console.log("Starting Auction with nonce:", nonce);
-                interaction
-                  .startAuction(addr, userAddress, wallet.address, {
-                    gasLimit: GAS_LIMIT,
-                    nonce: nonce++,
-                  })
-                  .then((tx: ethers.providers.TransactionResponse) => {
-                    console.log("Transaction sended");
-                    return tx.wait();
-                  })
-                  .then((tx: ethers.providers.TransactionReceipt) => {
-                    console.log("Transaction hash is:", tx.transactionHash);
-                  })
-                  .catch((err: any) => {
-                    console.error("Error!!");
-                    console.error("_________________________________________");
-                    console.error(err);
-                    console.error("_________________________________________");
-                  });
-              } else {
-                console.log("unprofitable");
-              }
-            } else {
-              console.log(userAddress, "no need for liquidation");
+        const partCount = 100;
+        const maxCount = Math.floor(users.length / 100);
+        let count = 0;
+        let index = 0;
+        let arrSlice = users.slice(index, index + partCount);
+        let prevSlice: string[] = [];
+        const id = setInterval(() => {
+          if (Math.floor(index / 100) !== count) {
+            ++count;
+            arrSlice = users.slice(index, index + partCount);
+          }
+          if (prevSlice !== arrSlice) {
+            prevSlice = arrSlice;
+            for (const userAddress of arrSlice) {
+              vat
+                .urns(ilk, userAddress)
+                .then((urn: any) => {
+                  console.log("user address:", userAddress);
+                  const ink = BigNumber.from(urn[0]);
+                  const art = BigNumber.from(urn[1]);
+                  const rate = BigNumber.from(vatIlk[1]);
+                  const spot = BigNumber.from(vatIlk[2]);
+                  const dust = BigNumber.from(vatIlk[4]);
+                  const chop = BigNumber.from(dogIlk[1]);
+                  console.log("index is ->", index);
+                  ++index;
+                  if (!spot.isZero() && ink.mul(spot).lt(art.mul(rate))) {
+                    // calculate tab
+                    const room = min(
+                      Hole.sub(Dirt),
+                      BigNumber.from(dogIlk[2]).sub(BigNumber.from(dogIlk[3]))
+                    );
+                    let dart = min(art, room.mul(wad).div(rate).div(chop));
+                    if (art.gt(dart) && art.sub(dart).mul(rate).lt(dust)) {
+                      dart = art;
+                    } else if (dart.mul(rate).lt(dust)) {
+                      console.log(userAddress, "no need for liquidation(dust amount)");
+                      return;
+                    }
+                    const due = dart.mul(rate);
+                    const tab = due.mul(chop).div(wad);
+                    // calculate USB incentives amount
+                    const usbIncentiveAmount = tip
+                      .add(wmul(tab, chip))
+                      .div(ray);
+                    // calculate transaction cost
+                    const txCost = gasPrice
+                      .mul(GAS_LIMIT)
+                      .mul(bnbPrice)
+                      .div(wad);
+                    if (txCost.lt(usbIncentiveAmount)) {
+                      console.log("Starting Auction with nonce:", nonce);
+                      interaction
+                        .startAuction(addr, userAddress, wallet.address, {
+                          gasLimit: GAS_LIMIT,
+                          nonce: nonce++,
+                        })
+                        .then((tx: ethers.providers.TransactionResponse) => {
+                          console.log("Transaction sended");
+                          return tx.wait();
+                        })
+                        .then((tx: ethers.providers.TransactionReceipt) => {
+                          console.log(
+                            "Transaction hash is:",
+                            tx.transactionHash
+                          );
+                        })
+                        .catch((err: any) => {
+                          console.error("Error!!");
+                          console.error(
+                            "_________________________________________"
+                          );
+                          console.error("reason  is  ->", err.reason);
+                          console.error("tx hash is ->", err.transactionHash);
+                          console.error(
+                            "_________________________________________"
+                          );
+                        });
+                    } else {
+                      console.log("unprofitable");
+                    }
+                  } else {
+                    console.log(userAddress, "no need for liquidation");
+                  }
+                })
+                .catch((err: any) => {
+                  console.log(
+                    "error on this user address ->",
+                    userAddress,
+                    "reason is ->",
+                    err.reason
+                  );
+                });
             }
-          });
-        }
+            if (count > maxCount) {
+              clearInterval(id);
+            }
+          }
+        }, 1000);
       }
     );
   };
@@ -173,10 +227,9 @@ const main = async () => {
         Dirt: BigNumber
       ]) => {
         console.log("SetInterval trigger!");
-        getUsersInDebt().then((response) => {
+        getUsersInDebt().then((users) => {
           Hole = BigNumber.from(Hole);
           Dirt = BigNumber.from(Dirt);
-          const responseData = response.data;
           const bnbPrice = BigNumber.from(roundData.answer).mul(10 ** 10);
           for (const tokenInfo of TOKENS) {
             startAuction(
@@ -186,7 +239,7 @@ const main = async () => {
               bnbPrice,
               Hole,
               Dirt,
-              responseData
+              users
             );
           }
         });
@@ -207,8 +260,7 @@ const main = async () => {
         Hole: BigNumber,
         Dirt: BigNumber
       ]) => {
-        getUsersInDebt().then((response) => {
-          const responseData = response.data;
+        getUsersInDebt().then((users) => {
           Hole = BigNumber.from(Hole);
           Dirt = BigNumber.from(Dirt);
           const bnbPrice = BigNumber.from(roundData.answer).mul(10 ** 10);
@@ -219,7 +271,7 @@ const main = async () => {
             bnbPrice,
             Hole,
             Dirt,
-            responseData
+            users
           );
         });
       }
