@@ -1,5 +1,5 @@
 import { ethers, BigNumber } from "ethers";
-import axios, { AxiosResponse } from "axios";
+import axios from "axios";
 import https from "https";
 
 import CLIP_ABI from "../abis/clipAbi.json";
@@ -194,7 +194,7 @@ const main = async () => {
     );
   }, START_AUCTION_INTERVAL);
 
-  spotContract.on("Poke", (ilk, vat, spot) => {
+  spotContract.on("Poke", (ilk, _1, _2) => {
     console.log("Poke event triggered");
     const tokenInfo = getTokenInfoByIlk(ilk);
     if (!tokenInfo) {
