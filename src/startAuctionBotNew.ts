@@ -117,8 +117,8 @@ const main = async () => {
       ]) => {
         tip = BigNumber.from(tip);
         chip = BigNumber.from(chip);
-        const partCount = 100;
-        const maxCount = Math.floor(users.length / 100);
+        const partCount = 50;
+        const maxCount = Math.floor(users.length / partCount);
         let count = 0;
         let index = 0;
         let arrSlice = users.slice(index, index + partCount);
