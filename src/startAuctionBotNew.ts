@@ -64,20 +64,22 @@ const instance = axios.create({
   httpsAgent: agent,
 });
 const getUsersInDebt = async () => {
-  return instance
-    .get("/liquidations/", { headers: { "Content-Type": "application/json" } })
-    .then((res) => {
-      const redUsers = res.data.redUsers;
-      const orangeUsers = res.data.orangeUsers;
-      const userArr: string[] = [];
-      for (const user of redUsers) {
-        userArr.push(user.userAddress);
-      }
-      for (const user of orangeUsers) {
-        userArr.push(user.userAddress);
-      }
-      return userArr;
-    });
+  const red = await instance.get("/liquidations/red", {
+    headers: { "Content-Type": "application/json" },
+  });
+  const orange = await instance.get("/liquidations/orange", {
+    headers: { "Content-Type": "application/json" },
+  });
+  const redUsers = red.data.users;
+  const orangeUsers = orange.data.users;
+  const userArr: string[] = [];
+  for (const user of redUsers) {
+    userArr.push(user.userAddress);
+  }
+  for (const user of orangeUsers) {
+    userArr.push(user.userAddress);
+  }
+  return userArr;
 };
 
 const getTokenInfoByIlk = (ilk: string) => {
@@ -153,7 +155,10 @@ const main = async () => {
                     if (art.gt(dart) && art.sub(dart).mul(rate).lt(dust)) {
                       dart = art;
                     } else if (dart.mul(rate).lt(dust)) {
-                      console.log(userAddress, "no need for liquidation(dust amount)");
+                      console.log(
+                        userAddress,
+                        "no need for liquidation(dust amount)"
+                      );
                       return;
                     }
                     const due = dart.mul(rate);
